@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: app
+
+      - name: Build frontend
+        run: VITE_IMG_FETCH_BASE=/api pnpm build
+        working-directory: app
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: app/dist
+
+  backend:
+    name: Run Backend Tests
+    runs-on: ubuntu-latest
+    needs: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system packages needed for Python deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libjpeg-dev zlib1g-dev libffi-dev
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install backend dependencies
+        run: pip install --no-cache-dir -r manager/requirements.txt
+
+      - name: Run pytest
+        working-directory: manager
+        run: pytest -q
