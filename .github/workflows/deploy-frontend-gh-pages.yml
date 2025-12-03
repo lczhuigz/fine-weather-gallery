@@ -5,6 +5,14 @@ on:
     branches: ["main"]
   workflow_dispatch: {}
 
+# Grant explicit permissions the job needs. If your repository or organization
+# restricts Actions permissions, this helps ensure the runner has rights to
+# create commits and update Pages. If this still fails, use a personal access
+# token (see below) and add it as `GH_PAGES_PAT` in repository Secrets.
+permissions:
+  contents: write
+  pages: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -32,8 +40,12 @@ jobs:
       - name: Deploy to GitHub Pages (gh-pages branch)
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Prefer a user-provided personal access token (GH_PAGES_PAT) when
+          # available; otherwise fall back to the automatically provided
+          # GITHUB_TOKEN. Create a PAT with `repo` scope and add it to the
+          # repository as the secret `GH_PAGES_PAT` if you continue to get
+          # permission errors.
+          github_token: ${{ secrets.GH_PAGES_PAT || github.token }}
           publish_dir: ./app/dist
           publish_branch: gh-pages
-          # a short message to identify automatic deploys
           commit_message: "chore: deploy frontend to gh-pages from ${{ github.sha }}"
